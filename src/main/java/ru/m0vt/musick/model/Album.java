@@ -1,7 +1,6 @@
 package ru.m0vt.musick.model;
 
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,6 +9,7 @@ import java.util.List;
 @Entity
 @Table(name = "albums")
 public class Album {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,7 +36,7 @@ public class Album {
 
     @OneToMany(mappedBy = "album")
     private List<Review> reviews;
-    
+
     @ManyToMany
     @JoinTable(
         name = "album_tags",
@@ -116,7 +116,7 @@ public class Album {
     public void setReviews(List<Review> reviews) {
         this.reviews = reviews;
     }
-    
+
     public List<Tag> getTags() {
         return tags;
     }

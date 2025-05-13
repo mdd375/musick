@@ -2,6 +2,7 @@ package ru.m0vt.musick.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.m0vt.musick.dto.ArtistCreateDTO;
 import ru.m0vt.musick.model.Artist;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.service.ArtistService;
@@ -26,8 +27,8 @@ public class ArtistController {
     }
 
     @PostMapping
-    public Artist createArtist(@RequestBody Artist artist) {
-        return artistService.createArtist(artist);
+    public Artist createArtist(@RequestBody ArtistCreateDTO artistDTO) {
+        return artistService.createArtist(artistDTO);
     }
 
     @PutMapping("/{id}")

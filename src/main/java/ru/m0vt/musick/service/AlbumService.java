@@ -1,7 +1,11 @@
 package ru.m0vt.musick.service;
 
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.m0vt.musick.dto.AlbumCreateDTO;
+import ru.m0vt.musick.dto.ReviewCreateDTO;
+import ru.m0vt.musick.dto.TrackCreateDTO;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.model.AlbumTag;
 import ru.m0vt.musick.model.Purchase;
@@ -9,24 +13,32 @@ import ru.m0vt.musick.model.Review;
 import ru.m0vt.musick.model.Track;
 import ru.m0vt.musick.repository.*;
 
-import java.util.List;
-
 @Service
 public class AlbumService {
+
     @Autowired
     private AlbumRepository albumRepository;
+
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
     private PurchaseRepository purchaseRepository;
+
     @Autowired
     private TagRepository tagRepository;
+
     @Autowired
     private AlbumTagRepository albumTagRepository;
+
     @Autowired
     private ReviewRepository reviewRepository;
+
     @Autowired
     private TrackRepository trackRepository;
+
+    @Autowired
+    private ArtistRepository artistRepository;
 
     public List<Album> getAllAlbums() {
         return albumRepository.findAll();
@@ -36,7 +48,20 @@ public class AlbumService {
         return albumRepository.findById(id).orElse(null);
     }
 
-    public Album createAlbum(Album album) {
+    public Album createAlbum(AlbumCreateDTO albumDTO) {
+        Album album = new Album();
+        album.setTitle(albumDTO.getTitle());
+        album.setCoverUrl(albumDTO.getCoverUrl());
+        album.setPrice(albumDTO.getPrice());
+        album.setReleaseDate(albumDTO.getReleaseDate());
+
+        if (albumDTO.getArtistId() != null) {
+            var artist = artistRepository
+                .findById(albumDTO.getArtistId())
+                .orElse(null);
+            album.setArtist(artist);
+        }
+
         return albumRepository.save(album);
     }
 
@@ -98,12 +123,23 @@ public class AlbumService {
         return album.getReviews();
     }
 
-    public Review addReviewToAlbum(Long albumId, Review review) {
+    public Review addReviewToAlbum(Long albumId, ReviewCreateDTO reviewDTO) {
         var album = albumRepository.findById(albumId).orElse(null);
         if (album == null) {
             throw new RuntimeException("Album not found");
         }
+
+        var user = userRepository.findById(reviewDTO.getUserId()).orElse(null);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        Review review = new Review();
         review.setAlbum(album);
+        review.setUser(user);
+        review.setText(reviewDTO.getText());
+        review.setFavoriteTracks(reviewDTO.getFavoriteTracks());
+
         return reviewRepository.save(review);
     }
 
@@ -115,10 +151,15 @@ public class AlbumService {
         return album.getTracks();
     }
 
-    public Track addTrackToAlbum(Long albumId, Track track) {
+    public Track addTrackToAlbum(Long albumId, TrackCreateDTO trackDTO) {
         var album = albumRepository.findById(albumId).orElse(null);
         if (album != null) {
+            Track track = new Track();
             track.setAlbum(album);
+            track.setTitle(trackDTO.getTitle());
+            track.setDurationSec(trackDTO.getDurationSec());
+            track.setTrackNumber(trackDTO.getTrackNumber());
+            track.setAudioUrl(trackDTO.getAudioUrl());
             return trackRepository.save(track);
         }
         return null;

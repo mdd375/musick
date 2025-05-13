@@ -1,11 +1,11 @@
 package ru.m0vt.musick.controller;
 
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.m0vt.musick.dto.UserCreateDTO;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.service.UserService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -25,8 +25,8 @@ public class UserController {
     }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.createUser(user);
+    public User createUser(@RequestBody UserCreateDTO userDTO) {
+        return userService.createUser(userDTO);
     }
 
     @PutMapping("/{id}")
@@ -55,7 +55,10 @@ public class UserController {
     }
 
     @PostMapping("/{userId}/subscriptions")
-    public Object addUserSubscription(@PathVariable Long userId, @RequestBody Artist artist) {
+    public Object addUserSubscription(
+        @PathVariable Long userId,
+        @RequestBody Artist artist
+    ) {
         return userService.addUserSubscription(userId, artist);
     }
 }

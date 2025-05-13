@@ -1,24 +1,30 @@
 package ru.m0vt.musick.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import ru.m0vt.musick.model.*;
-import ru.m0vt.musick.repository.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import ru.m0vt.musick.dto.UserCreateDTO;
+import ru.m0vt.musick.model.*;
+import ru.m0vt.musick.repository.*;
 
 @Service
 public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
     private PurchaseRepository purchaseRepository;
+
     @Autowired
     private ReviewRepository reviewRepository;
+
     @Autowired
     private SubscriptionRepository subscriptionRepository;
+
+    @Autowired
+    private ArtistRepository artistRepository;
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -32,13 +38,21 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
-    public User createUser(User user) {
-        if (userRepository.existsByUsername(user.getUsername())) {
+    public User createUser(UserCreateDTO userDTO) {
+        if (userRepository.existsByUsername(userDTO.getUsername())) {
             throw new IllegalArgumentException("Username already exists");
         }
-        if (userRepository.existsByEmail(user.getEmail())) {
+        if (userRepository.existsByEmail(userDTO.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
+
+        User user = new User();
+        user.setUsername(userDTO.getUsername());
+        user.setEmail(userDTO.getEmail());
+        user.setPasswordHash(userDTO.getPassword()); // Note: In a real app, you would hash this password
+        user.setRole(userDTO.getRole());
+        user.setCreatedAt(LocalDateTime.now());
+
         return userRepository.save(user);
     }
 
@@ -54,7 +68,7 @@ public class UserService {
     }
 
     public List<Purchase> getUserPurchases(Long userId) {
-       return purchaseRepository.findByUserId(userId);
+        return purchaseRepository.findByUserId(userId);
     }
 
     public List<Review> getUserReviews(Long userId) {

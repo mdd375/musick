@@ -1,11 +1,11 @@
 package ru.m0vt.musick.controller;
 
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.m0vt.musick.dto.*;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.service.AlbumService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/albums")
@@ -25,8 +25,8 @@ public class AlbumController {
     }
 
     @PostMapping
-    public Album createAlbum(@RequestBody Album album) {
-        return albumService.createAlbum(album);
+    public Album createAlbum(@RequestBody AlbumCreateDTO albumDTO) {
+        return albumService.createAlbum(albumDTO);
     }
 
     @PutMapping("/{id}")
@@ -40,17 +40,26 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/purchase")
-    public Purchase purchaseAlbum(@PathVariable Long albumId, @RequestBody Long userId) {
+    public Purchase purchaseAlbum(
+        @PathVariable Long albumId,
+        @RequestBody Long userId
+    ) {
         return albumService.purchaseAlbum(albumId, userId);
     }
 
     @PostMapping("/{albumId}/tags")
-    public AlbumTag addTagToAlbum(@PathVariable Long albumId, @RequestBody String tag) {
+    public AlbumTag addTagToAlbum(
+        @PathVariable Long albumId,
+        @RequestBody String tag
+    ) {
         return albumService.addTagToAlbum(albumId, tag);
     }
 
     @DeleteMapping("/{albumId}/tags/{tagId}")
-    public void removeTagFromAlbum(@PathVariable Long albumId, @PathVariable Long tagId) {
+    public void removeTagFromAlbum(
+        @PathVariable Long albumId,
+        @PathVariable Long tagId
+    ) {
         albumService.removeTagFromAlbum(albumId, tagId);
     }
 
@@ -60,8 +69,11 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/reviews")
-    public Review addReviewToAlbum(@PathVariable Long albumId, @RequestBody Review review) {
-        return albumService.addReviewToAlbum(albumId, review);
+    public Review addReviewToAlbum(
+        @PathVariable Long albumId,
+        @RequestBody ReviewCreateDTO reviewDTO
+    ) {
+        return albumService.addReviewToAlbum(albumId, reviewDTO);
     }
 
     @GetMapping("/{albumId}/tracks")
@@ -70,7 +82,10 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/tracks")
-    public Track addTrackToAlbum(@PathVariable Long albumId, @RequestBody Track track) {
-        return albumService.addTrackToAlbum(albumId, track);
+    public Track addTrackToAlbum(
+        @PathVariable Long albumId,
+        @RequestBody TrackCreateDTO trackDTO
+    ) {
+        return albumService.addTrackToAlbum(albumId, trackDTO);
     }
 }
