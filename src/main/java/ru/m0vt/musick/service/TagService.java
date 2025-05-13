@@ -9,6 +9,7 @@ import java.util.List;
 
 @Service
 public class TagService {
+    @Autowired
     private TagRepository tagRepository;
 
     public List<Tag> getAllTags() {

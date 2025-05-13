@@ -9,6 +9,7 @@ import java.util.List;
 
 @Service
 public class PurchaseService {
+    @Autowired
     private PurchaseRepository purchaseRepository;
 
     public List<Purchase> getAllPurchases() {

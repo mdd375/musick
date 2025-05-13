@@ -1,5 +1,6 @@
 package ru.m0vt.musick.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.service.AlbumService;
@@ -10,6 +11,7 @@ import java.util.List;
 @RequestMapping("/albums")
 public class AlbumController {
 
+    @Autowired
     private AlbumService albumService;
 
     @GetMapping

@@ -1,5 +1,6 @@
 package ru.m0vt.musick.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.model.Artist;
@@ -10,7 +11,9 @@ import java.util.List;
 
 @Service
 public class ArtistService {
+    @Autowired
     private ArtistRepository artistRepository;
+    @Autowired
     private AlbumRepository albumRepository;
 
     public List<Artist> getAllArtists() {

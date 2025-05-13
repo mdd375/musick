@@ -11,9 +11,13 @@ import java.util.List;
 @Service
 public class UserService {
 
+    @Autowired
     private UserRepository userRepository;
+    @Autowired
     private PurchaseRepository purchaseRepository;
+    @Autowired
     private ReviewRepository reviewRepository;
+    @Autowired
     private SubscriptionRepository subscriptionRepository;
 
     public List<User> getAllUsers() {

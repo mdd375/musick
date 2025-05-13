@@ -9,6 +9,7 @@ import java.util.List;
 
 @Service
 public class ReviewService {
+    @Autowired
     private ReviewRepository reviewRepository;
 
     public void saveReview(Review review) {

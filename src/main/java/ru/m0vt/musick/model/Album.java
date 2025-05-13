@@ -36,6 +36,14 @@ public class Album {
 
     @OneToMany(mappedBy = "album")
     private List<Review> reviews;
+    
+    @ManyToMany
+    @JoinTable(
+        name = "album_tags",
+        joinColumns = @JoinColumn(name = "album_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private List<Tag> tags;
 
     public Long getId() {
         return id;
@@ -107,5 +115,13 @@ public class Album {
 
     public void setReviews(List<Review> reviews) {
         this.reviews = reviews;
+    }
+    
+    public List<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<Tag> tags) {
+        this.tags = tags;
     }
 }

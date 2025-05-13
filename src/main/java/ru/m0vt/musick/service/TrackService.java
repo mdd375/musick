@@ -1,5 +1,6 @@
 package ru.m0vt.musick.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.m0vt.musick.model.Track;
 import ru.m0vt.musick.repository.TrackRepository;
@@ -8,6 +9,7 @@ import java.util.List;
 
 @Service
 public class TrackService {
+    @Autowired
     private TrackRepository trackRepository;
 
     public List<Track> getAllTracks() {

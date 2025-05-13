@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Purchases")
+@Table(name = "purchases")
 public class Purchase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +21,7 @@ public class Purchase {
     private Album album;
 
     @Column(name = "purchase_date")
-    private LocalDateTime PurchaseDate;
+    private LocalDateTime purchaseDate;
 
     public BigDecimal getAmount() {
         return amount;
@@ -32,11 +32,11 @@ public class Purchase {
     }
 
     public LocalDateTime getPurchaseDate() {
-        return PurchaseDate;
+        return purchaseDate;
     }
 
     public void setPurchaseDate(LocalDateTime purchaseDate) {
-        PurchaseDate = purchaseDate;
+        this.purchaseDate = purchaseDate;
     }
 
     public Album getAlbum() {

@@ -1,19 +1,31 @@
 package ru.m0vt.musick.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.m0vt.musick.model.*;
+import ru.m0vt.musick.model.Album;
+import ru.m0vt.musick.model.AlbumTag;
+import ru.m0vt.musick.model.Purchase;
+import ru.m0vt.musick.model.Review;
+import ru.m0vt.musick.model.Track;
 import ru.m0vt.musick.repository.*;
 
 import java.util.List;
 
 @Service
 public class AlbumService {
+    @Autowired
     private AlbumRepository albumRepository;
+    @Autowired
     private UserRepository userRepository;
+    @Autowired
     private PurchaseRepository purchaseRepository;
+    @Autowired
     private TagRepository tagRepository;
+    @Autowired
     private AlbumTagRepository albumTagRepository;
+    @Autowired
     private ReviewRepository reviewRepository;
+    @Autowired
     private TrackRepository trackRepository;
 
     public List<Album> getAllAlbums() {
