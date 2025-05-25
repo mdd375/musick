@@ -51,6 +51,11 @@ public class OpenApiConfig {
                             .bearerFormat("JWT")
                             .in(SecurityScheme.In.HEADER)
                             .name("Authorization")
+                            .description(
+                                "JWT Authorization заголовок используя схему Bearer. \n\n" +
+                                "Введите 'Bearer' [пробел] и ваш токен.\n\n" +
+                                "Пример: 'Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIi...'"
+                            )
                     )
             );
     }

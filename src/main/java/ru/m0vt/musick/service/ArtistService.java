@@ -5,8 +5,10 @@ import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.ArtistCreateDTO;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.model.Artist;
+import ru.m0vt.musick.model.Subscription;
 import ru.m0vt.musick.repository.AlbumRepository;
 import ru.m0vt.musick.repository.ArtistRepository;
+import ru.m0vt.musick.repository.SubscriptionRepository;
 import ru.m0vt.musick.repository.UserRepository;
 
 import java.util.List;
@@ -19,6 +21,8 @@ public class ArtistService {
     private AlbumRepository albumRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
 
     public List<Artist> getAllArtists() {
         return artistRepository.findAll();
@@ -58,10 +62,18 @@ public class ArtistService {
         artistRepository.deleteById(id);
     }
 
-    public List<Album> getAlbumsByArtist(Long artistId) {
+    public List<Album> getArtistAlbums(Long artistId) {
         Artist artist = artistRepository.findById(artistId).orElse(null);
         if (artist != null) {
             return albumRepository.findByArtist(artist);
+        }
+        return null;
+    }
+    
+    public List<Subscription> getArtistSubscribers(Long artistId) {
+        Artist artist = artistRepository.findById(artistId).orElse(null);
+        if (artist != null) {
+            return subscriptionRepository.findByArtistId(artistId);
         }
         return null;
     }
