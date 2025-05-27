@@ -5,9 +5,11 @@ import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.ArtistCreateDTO;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.model.Artist;
+import ru.m0vt.musick.model.Review;
 import ru.m0vt.musick.model.Subscription;
 import ru.m0vt.musick.repository.AlbumRepository;
 import ru.m0vt.musick.repository.ArtistRepository;
+import ru.m0vt.musick.repository.ReviewRepository;
 import ru.m0vt.musick.repository.SubscriptionRepository;
 import ru.m0vt.musick.repository.UserRepository;
 
@@ -23,6 +25,8 @@ public class ArtistService {
     private UserRepository userRepository;
     @Autowired
     private SubscriptionRepository subscriptionRepository;
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     public List<Artist> getAllArtists() {
         return artistRepository.findAll();
@@ -76,5 +80,9 @@ public class ArtistService {
             return subscriptionRepository.findByArtistId(artistId);
         }
         return null;
+    }
+    
+    public List<Review> getAlbumReviews(Long albumId) {
+        return reviewRepository.findByAlbumId(albumId);
     }
 }

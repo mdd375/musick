@@ -44,12 +44,31 @@ public class AuthenticationService {
             throw new RuntimeException("Email is already in use");
         }
         
+        // Если роль - ADMIN, проверяем права текущего пользователя
+        if ("ADMIN".equalsIgnoreCase(request.getRole())) {
+            // Получаем текущего пользователя, если он есть
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            boolean isAdmin = false;
+            
+            if (authentication != null && authentication.isAuthenticated() && 
+                    !"anonymousUser".equals(authentication.getPrincipal())) {
+                isAdmin = authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            }
+            
+            // Если текущий пользователь не админ, отказываем в создании админа
+            if (!isAdmin) {
+                throw new RuntimeException("Only administrators can create users with ADMIN role");
+            }
+        }
+        
         // Создаем нового пользователя
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole());
+        // Для не-админов разрешаем только роли USER и ARTIST
+        user.setRole("ADMIN".equalsIgnoreCase(request.getRole()) ? "ADMIN" : request.getRole());
         user.setCreatedAt(LocalDateTime.now());
         
         // Сохраняем пользователя

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.m0vt.musick.dto.ArtistCreateDTO;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.model.Artist;
+import ru.m0vt.musick.model.Review;
 import ru.m0vt.musick.model.Subscription;
 import ru.m0vt.musick.service.ArtistService;
 
@@ -28,19 +29,26 @@ public class ArtistController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize(
+        "@securityService.canCreateArtistFor(authentication, #artistDTO.userId)"
+    )
     public Artist createArtist(@RequestBody ArtistCreateDTO artistDTO) {
         return artistService.createArtist(artistDTO);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@securityService.isSameUser(authentication, #artist.user.id) or hasRole('ADMIN')")
-    public Artist updateArtist(@PathVariable Long id, @RequestBody Artist artist) {
+    @PreAuthorize(
+        "@securityService.isSameUser(authentication, #artist.user.id)"
+    )
+    public Artist updateArtist(
+        @PathVariable Long id,
+        @RequestBody Artist artist
+    ) {
         return artistService.updateArtist(id, artist);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@securityService.isSameUser(authentication, #id) or hasRole('ADMIN')")
+    @PreAuthorize("@securityService.isSameUser(authentication, #id)")
     public void deleteArtist(@PathVariable Long id) {
         artistService.deleteArtist(id);
     }
@@ -51,8 +59,18 @@ public class ArtistController {
     }
 
     @GetMapping("/{artistId}/subscribers")
-    @PreAuthorize("@securityService.isSameUser(authentication, #artistId) or hasRole('ADMIN')")
-    public List<Subscription> getArtistSubscribers(@PathVariable Long artistId) {
+    @PreAuthorize("@securityService.isSameUser(authentication, #artistId)")
+    public List<Subscription> getArtistSubscribers(
+        @PathVariable Long artistId
+    ) {
         return artistService.getArtistSubscribers(artistId);
+    }
+
+    @GetMapping("/{artistId}/albums/{albumId}/reviews")
+    public List<Review> getAlbumReviews(
+        @PathVariable Long artistId,
+        @PathVariable Long albumId
+    ) {
+        return artistService.getAlbumReviews(albumId);
     }
 }

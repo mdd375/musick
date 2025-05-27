@@ -3,6 +3,8 @@ package ru.m0vt.musick.controller;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import ru.m0vt.musick.dto.*;
 import ru.m0vt.musick.model.*;
@@ -32,19 +34,19 @@ public class AlbumController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@securityService.isAlbumOwner(authentication, #id) or hasRole('ADMIN')")
+    @PreAuthorize("@securityService.isAlbumOwner(authentication, #id)")
     public Album updateAlbum(@PathVariable Long id, @RequestBody Album album) {
         return albumService.updateAlbum(id, album);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("@securityService.isAlbumOwner(authentication, #id) or hasRole('ADMIN')")
+    @PreAuthorize("@securityService.isAlbumOwner(authentication, #id)")
     public void deleteAlbum(@PathVariable Long id) {
         albumService.deleteAlbum(id);
     }
 
     @PostMapping("/{albumId}/purchase")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN') and @securityService.isSameUser(authentication, #userId)")
+    @PreAuthorize("(@securityService.canPurchaseAlbum(authentication)")
     public Purchase purchaseAlbum(
         @PathVariable Long albumId,
         @RequestBody Long userId
@@ -53,7 +55,7 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/tags")
-    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId) or hasRole('ADMIN')")
+    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId)")
     public AlbumTag addTagToAlbum(
         @PathVariable Long albumId,
         @RequestBody String tag
@@ -62,7 +64,7 @@ public class AlbumController {
     }
 
     @DeleteMapping("/{albumId}/tags/{tagId}")
-    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId) or hasRole('ADMIN')")
+    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId)")
     public void removeTagFromAlbum(
         @PathVariable Long albumId,
         @PathVariable Long tagId
@@ -76,7 +78,7 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/reviews")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN') and @securityService.isSameUser(authentication, #reviewDTO.userId)")
+    @PreAuthorize("(@securityService.canWriteReview(authentication)")
     public Review addReviewToAlbum(
         @PathVariable Long albumId,
         @RequestBody ReviewCreateDTO reviewDTO
@@ -90,7 +92,7 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/tracks")
-    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId) or hasRole('ADMIN')")
+    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId)")
     public Track addTrackToAlbum(
         @PathVariable Long albumId,
         @RequestBody TrackCreateDTO trackDTO

@@ -3,7 +3,9 @@ package ru.m0vt.musick.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import ru.m0vt.musick.dto.UserCreateDTO;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.repository.*;
@@ -25,6 +27,9 @@ public class UserService {
 
     @Autowired
     private ArtistRepository artistRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -49,7 +54,7 @@ public class UserService {
         User user = new User();
         user.setUsername(userDTO.getUsername());
         user.setEmail(userDTO.getEmail());
-        user.setPasswordHash(userDTO.getPassword()); // Note: In a real app, you would hash this password
+        user.setPasswordHash(passwordEncoder.encode(userDTO.getPassword())); // Хешируем пароль
         user.setRole(userDTO.getRole());
         user.setCreatedAt(LocalDateTime.now());
 
