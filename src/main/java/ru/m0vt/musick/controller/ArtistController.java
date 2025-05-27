@@ -2,6 +2,7 @@ package ru.m0vt.musick.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -12,64 +13,170 @@ import ru.m0vt.musick.model.Review;
 import ru.m0vt.musick.model.Subscription;
 import ru.m0vt.musick.service.ArtistService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/artists")
+@Tag(name = "Артисты", description = "API для работы с артистами, их альбомами и подписчиками")
 public class ArtistController {
 
     @Autowired
     private ArtistService artistService;
 
+    @Operation(
+        summary = "Получение списка всех артистов",
+        description = "Возвращает список всех артистов, зарегистрированных в системе"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Список артистов успешно получен")
+    })
     @GetMapping
-    public List<Artist> getAllArtists() {
-        return artistService.getAllArtists();
+    public ResponseEntity<List<Artist>> getAllArtists() {
+        return ResponseEntity.ok(artistService.getAllArtists());
     }
 
+    @Operation(
+        summary = "Получение артиста по ID",
+        description = "Возвращает информацию об артисте по указанному ID"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Артист успешно найден"),
+        @ApiResponse(responseCode = "404", description = "Артист не найден")
+    })
     @GetMapping("/{id}")
-    public Artist getArtistById(@PathVariable Long id) {
-        return artistService.getArtistById(id);
+    public ResponseEntity<Artist> getArtistById(
+        @Parameter(description = "ID артиста") @PathVariable Long id
+    ) {
+        Artist artist = artistService.getArtistById(id);
+        if (artist == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(artist);
     }
 
+    @Operation(
+        summary = "Создание профиля артиста",
+        description = "Создает профиль артиста для текущего пользователя. Доступно только пользователям и администраторам.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Профиль артиста успешно создан"),
+        @ApiResponse(responseCode = "400", description = "Некорректные данные для создания профиля артиста"),
+        @ApiResponse(responseCode = "401", description = "Не авторизован"),
+        @ApiResponse(responseCode = "403", description = "Недостаточно прав"),
+        @ApiResponse(responseCode = "409", description = "У пользователя уже есть профиль артиста")
+    })
     @PostMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public Artist createArtist(@RequestBody ArtistCreateDTO artistDTO, Authentication authentication) {
-        return artistService.createArtist(artistDTO, authentication);
+    public ResponseEntity<Artist> createArtist(
+        @Valid @RequestBody ArtistCreateDTO artistDTO,
+        Authentication authentication
+    ) {
+        return ResponseEntity.ok(artistService.createArtist(artistDTO, authentication));
     }
 
+    @Operation(
+        summary = "Обновление профиля артиста",
+        description = "Обновляет информацию о профиле артиста. Доступно только владельцу профиля и администраторам.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Профиль артиста успешно обновлен"),
+        @ApiResponse(responseCode = "400", description = "Некорректные данные для обновления профиля"),
+        @ApiResponse(responseCode = "401", description = "Не авторизован"),
+        @ApiResponse(responseCode = "403", description = "Недостаточно прав (должен быть владельцем профиля)"),
+        @ApiResponse(responseCode = "404", description = "Профиль артиста не найден")
+    })
     @PutMapping("/{id}")
     @PreAuthorize(
         "@securityService.isSameUser(authentication, #artist.user.id)"
     )
-    public Artist updateArtist(
-        @PathVariable Long id,
-        @RequestBody Artist artist
+    public ResponseEntity<Artist> updateArtist(
+        @Parameter(description = "ID артиста") @PathVariable Long id,
+        @Valid @RequestBody Artist artist
     ) {
-        return artistService.updateArtist(id, artist);
+        Artist updatedArtist = artistService.updateArtist(id, artist);
+        if (updatedArtist == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(updatedArtist);
     }
 
+    @Operation(
+        summary = "Удаление профиля артиста",
+        description = "Удаляет профиль артиста. Доступно только владельцу профиля и администраторам.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Профиль артиста успешно удален"),
+        @ApiResponse(responseCode = "401", description = "Не авторизован"),
+        @ApiResponse(responseCode = "403", description = "Недостаточно прав (должен быть владельцем профиля)"),
+        @ApiResponse(responseCode = "404", description = "Профиль артиста не найден")
+    })
     @DeleteMapping("/{id}")
     @PreAuthorize("@securityService.isSameUser(authentication, #id)")
-    public void deleteArtist(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteArtist(
+        @Parameter(description = "ID артиста") @PathVariable Long id
+    ) {
         artistService.deleteArtist(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(
+        summary = "Получение альбомов артиста",
+        description = "Возвращает список всех альбомов указанного артиста"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Список альбомов успешно получен"),
+        @ApiResponse(responseCode = "404", description = "Артист не найден")
+    })
     @GetMapping("/{artistId}/albums")
-    public List<Album> getArtistAlbums(@PathVariable Long artistId) {
-        return artistService.getArtistAlbums(artistId);
+    public ResponseEntity<List<Album>> getArtistAlbums(
+        @Parameter(description = "ID артиста") @PathVariable Long artistId
+    ) {
+        return ResponseEntity.ok(artistService.getArtistAlbums(artistId));
     }
 
+    @Operation(
+        summary = "Получение подписчиков артиста",
+        description = "Возвращает список всех подписчиков артиста. Доступно только самому артисту и администраторам.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Список подписчиков успешно получен"),
+        @ApiResponse(responseCode = "401", description = "Не авторизован"),
+        @ApiResponse(responseCode = "403", description = "Недостаточно прав (должен быть владельцем профиля)"),
+        @ApiResponse(responseCode = "404", description = "Артист не найден")
+    })
     @GetMapping("/{artistId}/subscribers")
     @PreAuthorize("@securityService.isSameUser(authentication, #artistId)")
-    public List<Subscription> getArtistSubscribers(
-        @PathVariable Long artistId
+    public ResponseEntity<List<Subscription>> getArtistSubscribers(
+        @Parameter(description = "ID артиста") @PathVariable Long artistId
     ) {
-        return artistService.getArtistSubscribers(artistId);
+        return ResponseEntity.ok(artistService.getArtistSubscribers(artistId));
     }
 
+    @Operation(
+        summary = "Получение отзывов на альбом артиста",
+        description = "Возвращает список всех отзывов на указанный альбом артиста"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Список отзывов успешно получен"),
+        @ApiResponse(responseCode = "404", description = "Артист или альбом не найден")
+    })
     @GetMapping("/{artistId}/albums/{albumId}/reviews")
-    public List<Review> getAlbumReviews(
-        @PathVariable Long artistId,
-        @PathVariable Long albumId
+    public ResponseEntity<List<Review>> getAlbumReviews(
+        @Parameter(description = "ID артиста") @PathVariable Long artistId,
+        @Parameter(description = "ID альбома") @PathVariable Long albumId
     ) {
-        return artistService.getAlbumReviews(albumId);
+        return ResponseEntity.ok(artistService.getAlbumReviews(albumId));
     }
 }
