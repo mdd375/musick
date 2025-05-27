@@ -2,6 +2,7 @@ package ru.m0vt.musick.service;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.AlbumCreateDTO;
 import ru.m0vt.musick.dto.ReviewCreateDTO;
@@ -48,19 +49,24 @@ public class AlbumService {
         return albumRepository.findById(id).orElse(null);
     }
 
-    public Album createAlbum(AlbumCreateDTO albumDTO) {
+    public Album createAlbum(AlbumCreateDTO albumDTO, Authentication authentication) {
         Album album = new Album();
         album.setTitle(albumDTO.getTitle());
         album.setCoverUrl(albumDTO.getCoverUrl());
         album.setPrice(albumDTO.getPrice());
         album.setReleaseDate(albumDTO.getReleaseDate());
 
-        if (albumDTO.getArtistId() != null) {
-            var artist = artistRepository
-                .findById(albumDTO.getArtistId())
-                .orElse(null);
-            album.setArtist(artist);
+        // Получаем пользователя из токена
+        String username = authentication.getName();
+        var user = userRepository.findByUsername(username).orElseThrow(() -> 
+            new RuntimeException("User not found"));
+        
+        // Проверяем, что пользователь имеет профиль артиста
+        if (user.getArtistProfile() == null) {
+            throw new RuntimeException("User does not have an artist profile");
         }
+        
+        album.setArtist(user.getArtistProfile());
 
         return albumRepository.save(album);
     }
@@ -81,18 +87,19 @@ public class AlbumService {
         albumRepository.deleteById(id);
     }
 
-    public Purchase purchaseAlbum(Long albumId, Long userId) {
-        var user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            throw new RuntimeException("User not found");
-        }
-        var album = albumRepository.findById(albumId).orElse(null);
-        if (album == null) {
-            throw new RuntimeException("Album not found");
-        }
+    public Purchase purchaseAlbum(Long albumId, Authentication authentication) {
+        // Получаем пользователя из токена
+        String username = authentication.getName();
+        var user = userRepository.findByUsername(username).orElseThrow(() -> 
+            new RuntimeException("User not found"));
+            
+        var album = albumRepository.findById(albumId).orElseThrow(() -> 
+            new RuntimeException("Album not found"));
+            
         var purchase = new Purchase();
         purchase.setAlbum(album);
         purchase.setUser(user);
+        purchase.setAmount(album.getPrice());
         return purchaseRepository.save(purchase);
     }
 
@@ -123,16 +130,14 @@ public class AlbumService {
         return album.getReviews();
     }
 
-    public Review addReviewToAlbum(Long albumId, ReviewCreateDTO reviewDTO) {
-        var album = albumRepository.findById(albumId).orElse(null);
-        if (album == null) {
-            throw new RuntimeException("Album not found");
-        }
+    public Review addReviewToAlbum(Long albumId, ReviewCreateDTO reviewDTO, Authentication authentication) {
+        var album = albumRepository.findById(albumId).orElseThrow(() -> 
+            new RuntimeException("Album not found"));
 
-        var user = userRepository.findById(reviewDTO.getUserId()).orElse(null);
-        if (user == null) {
-            throw new RuntimeException("User not found");
-        }
+        // Получаем пользователя из токена
+        String username = authentication.getName();
+        var user = userRepository.findByUsername(username).orElseThrow(() -> 
+            new RuntimeException("User not found"));
 
         Review review = new Review();
         review.setAlbum(album);

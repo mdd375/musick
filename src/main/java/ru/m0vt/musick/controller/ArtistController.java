@@ -3,6 +3,7 @@ package ru.m0vt.musick.controller;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ru.m0vt.musick.dto.ArtistCreateDTO;
 import ru.m0vt.musick.model.Album;
@@ -29,11 +30,9 @@ public class ArtistController {
     }
 
     @PostMapping
-    @PreAuthorize(
-        "@securityService.canCreateArtistFor(authentication, #artistDTO.userId)"
-    )
-    public Artist createArtist(@RequestBody ArtistCreateDTO artistDTO) {
-        return artistService.createArtist(artistDTO);
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public Artist createArtist(@RequestBody ArtistCreateDTO artistDTO, Authentication authentication) {
+        return artistService.createArtist(artistDTO, authentication);
     }
 
     @PutMapping("/{id}")

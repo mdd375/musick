@@ -18,6 +18,9 @@ public class User {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    
+    @Column(name = "balance")
+    private java.math.BigDecimal balance;
 
     @OneToOne(mappedBy = "user")
     private Artist artist;
@@ -76,6 +79,14 @@ public class User {
 
     public void setArtistProfile(Artist artist) {
         this.artist = artist;
+    }
+    
+    public java.math.BigDecimal getBalance() {
+        return balance;
+    }
+
+    public void setBalance(java.math.BigDecimal balance) {
+        this.balance = balance;
     }
 
 }

@@ -7,19 +7,11 @@ import java.time.LocalDate;
  * DTO for creating a new album
  */
 public class AlbumCreateDTO {
-    private Long artistId;
     private String title;
     private String coverUrl;
     private BigDecimal price;
     private LocalDate releaseDate;
 
-    public Long getArtistId() {
-        return artistId;
-    }
-
-    public void setArtistId(Long artistId) {
-        this.artistId = artistId;
-    }
 
     public String getTitle() {
         return title;

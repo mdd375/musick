@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.math.BigDecimal;
 import ru.m0vt.musick.dto.AuthRequestDTO;
 import ru.m0vt.musick.dto.AuthResponseDTO;
 import ru.m0vt.musick.dto.RegisterRequestDTO;
@@ -70,6 +71,8 @@ public class AuthenticationService {
         // Для не-админов разрешаем только роли USER и ARTIST
         user.setRole("ADMIN".equalsIgnoreCase(request.getRole()) ? "ADMIN" : request.getRole());
         user.setCreatedAt(LocalDateTime.now());
+        // Устанавливаем начальный баланс
+        user.setBalance(java.math.BigDecimal.ZERO);
         
         // Сохраняем пользователя
         userRepository.save(user);

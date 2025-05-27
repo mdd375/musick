@@ -1,6 +1,7 @@
 package ru.m0vt.musick.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.ArtistCreateDTO;
 import ru.m0vt.musick.model.Album;
@@ -36,10 +37,16 @@ public class ArtistService {
         return artistRepository.findById(id).orElse(null);
     }
 
-    public Artist createArtist(ArtistCreateDTO artistDTO) {
-        var user = userRepository.findById(artistDTO.getUserId()).orElse(null);
+    public Artist createArtist(ArtistCreateDTO artistDTO, Authentication authentication) {
+        String username = authentication.getName();
+        var user = userRepository.findByUsername(username).orElse(null);
         if (user == null) {
             throw new RuntimeException("User not found");
+        }
+        
+        // Проверка, что у пользователя еще нет профиля артиста
+        if (user.getArtistProfile() != null) {
+            throw new RuntimeException("User already has artist profile");
         }
         
         Artist artist = new Artist();

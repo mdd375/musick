@@ -3,9 +3,13 @@ package ru.m0vt.musick.controller;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import ru.m0vt.musick.dto.AddBalanceDTO;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.service.UserService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/users")
@@ -39,32 +43,42 @@ public class UserController {
         userService.deleteUser(id);
     }
 
-    @GetMapping("/{userId}/purchases")
-    @PreAuthorize("@securityService.isSameUser(authentication, #userId)")
-    public List<Purchase> getUserPurchases(@PathVariable Long userId) {
-        return userService.getUserPurchases(userId);
+    @GetMapping("/me/purchases")
+    public List<Purchase> getUserPurchases(Authentication authentication) {
+        return userService.getUserPurchases(authentication);
     }
 
-    @GetMapping("/{userId}/reviews")
-    @PreAuthorize("@securityService.isSameUser(authentication, #userId)")
-    public List<Review> getUserReviews(@PathVariable Long userId) {
-        return userService.getUserReviews(userId);
+    @GetMapping("/me/reviews")
+    public List<Review> getUserReviews(Authentication authentication) {
+        return userService.getUserReviews(authentication);
     }
 
-    @GetMapping("/{userId}/subscriptions")
-    @PreAuthorize("@securityService.isSameUser(authentication, #userId)")
-    public List<Subscription> getUserSubscriptions(@PathVariable Long userId) {
-        return userService.getUserSubscriptions(userId);
+    @GetMapping("/me/subscriptions")
+    public List<Subscription> getUserSubscriptions(Authentication authentication) {
+        return userService.getUserSubscriptions(authentication);
     }
 
-    @PostMapping("/{userId}/subscriptions")
-    @PreAuthorize(
-        "@securityService.isSameUser(authentication, #userId) and hasRole('USER') or hasRole('ADMIN')"
-    )
+    @PostMapping("/me/subscriptions/{artistId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public Object addUserSubscription(
-        @PathVariable Long userId,
-        @RequestBody Artist artist
+        @PathVariable Long artistId,
+        Authentication authentication
     ) {
-        return userService.addUserSubscription(userId, artist);
+        return userService.addUserSubscription(artistId, authentication);
+    }
+    
+    /**
+     * Эндпоинт для пополнения баланса пользователя
+     * 
+     * @param addBalanceDTO Сумма для пополнения
+     * @param authentication Данные аутентификации
+     * @return Обновлённый объект пользователя
+     */
+    @PostMapping("/me/balance")
+    public User addBalance(
+        @Valid @RequestBody AddBalanceDTO addBalanceDTO,
+        Authentication authentication
+    ) {
+        return userService.addBalance(addBalanceDTO, authentication);
     }
 }

@@ -29,8 +29,8 @@ public class AlbumController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ARTIST', 'ADMIN')")
-    public Album createAlbum(@RequestBody AlbumCreateDTO albumDTO) {
-        return albumService.createAlbum(albumDTO);
+    public Album createAlbum(@RequestBody AlbumCreateDTO albumDTO, Authentication authentication) {
+        return albumService.createAlbum(albumDTO, authentication);
     }
 
     @PutMapping("/{id}")
@@ -46,12 +46,12 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/purchase")
-    @PreAuthorize("(@securityService.canPurchaseAlbum(authentication)")
+    @PreAuthorize("@securityService.canPurchaseAlbum(authentication)")
     public Purchase purchaseAlbum(
         @PathVariable Long albumId,
-        @RequestBody Long userId
+        Authentication authentication
     ) {
-        return albumService.purchaseAlbum(albumId, userId);
+        return albumService.purchaseAlbum(albumId, authentication);
     }
 
     @PostMapping("/{albumId}/tags")
@@ -78,12 +78,13 @@ public class AlbumController {
     }
 
     @PostMapping("/{albumId}/reviews")
-    @PreAuthorize("(@securityService.canWriteReview(authentication)")
+    @PreAuthorize("@securityService.canWriteReview(authentication)")
     public Review addReviewToAlbum(
         @PathVariable Long albumId,
-        @RequestBody ReviewCreateDTO reviewDTO
+        @RequestBody ReviewCreateDTO reviewDTO,
+        Authentication authentication
     ) {
-        return albumService.addReviewToAlbum(albumId, reviewDTO);
+        return albumService.addReviewToAlbum(albumId, reviewDTO, authentication);
     }
 
     @GetMapping("/{albumId}/tracks")
