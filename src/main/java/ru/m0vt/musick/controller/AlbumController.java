@@ -4,7 +4,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import ru.m0vt.musick.dto.*;
 import ru.m0vt.musick.model.*;
@@ -29,7 +28,10 @@ public class AlbumController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ARTIST', 'ADMIN')")
-    public Album createAlbum(@RequestBody AlbumCreateDTO albumDTO, Authentication authentication) {
+    public Album createAlbum(
+        @RequestBody AlbumCreateDTO albumDTO,
+        Authentication authentication
+    ) {
         return albumService.createAlbum(albumDTO, authentication);
     }
 
@@ -84,7 +86,11 @@ public class AlbumController {
         @RequestBody ReviewCreateDTO reviewDTO,
         Authentication authentication
     ) {
-        return albumService.addReviewToAlbum(albumId, reviewDTO, authentication);
+        return albumService.addReviewToAlbum(
+            albumId,
+            reviewDTO,
+            authentication
+        );
     }
 
     @GetMapping("/{albumId}/tracks")

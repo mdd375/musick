@@ -38,9 +38,6 @@ public class AlbumService {
     @Autowired
     private TrackRepository trackRepository;
 
-    @Autowired
-    private ArtistRepository artistRepository;
-
     public List<Album> getAllAlbums() {
         return albumRepository.findAll();
     }
@@ -49,7 +46,10 @@ public class AlbumService {
         return albumRepository.findById(id).orElse(null);
     }
 
-    public Album createAlbum(AlbumCreateDTO albumDTO, Authentication authentication) {
+    public Album createAlbum(
+        AlbumCreateDTO albumDTO,
+        Authentication authentication
+    ) {
         Album album = new Album();
         album.setTitle(albumDTO.getTitle());
         album.setCoverUrl(albumDTO.getCoverUrl());
@@ -58,14 +58,15 @@ public class AlbumService {
 
         // Получаем пользователя из токена
         String username = authentication.getName();
-        var user = userRepository.findByUsername(username).orElseThrow(() -> 
-            new RuntimeException("User not found"));
-        
+        var user = userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
         // Проверяем, что пользователь имеет профиль артиста
         if (user.getArtistProfile() == null) {
             throw new RuntimeException("User does not have an artist profile");
         }
-        
+
         album.setArtist(user.getArtistProfile());
 
         return albumRepository.save(album);
@@ -90,12 +91,14 @@ public class AlbumService {
     public Purchase purchaseAlbum(Long albumId, Authentication authentication) {
         // Получаем пользователя из токена
         String username = authentication.getName();
-        var user = userRepository.findByUsername(username).orElseThrow(() -> 
-            new RuntimeException("User not found"));
-            
-        var album = albumRepository.findById(albumId).orElseThrow(() -> 
-            new RuntimeException("Album not found"));
-            
+        var user = userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        var album = albumRepository
+            .findById(albumId)
+            .orElseThrow(() -> new RuntimeException("Album not found"));
+
         var purchase = new Purchase();
         purchase.setAlbum(album);
         purchase.setUser(user);
@@ -130,14 +133,20 @@ public class AlbumService {
         return album.getReviews();
     }
 
-    public Review addReviewToAlbum(Long albumId, ReviewCreateDTO reviewDTO, Authentication authentication) {
-        var album = albumRepository.findById(albumId).orElseThrow(() -> 
-            new RuntimeException("Album not found"));
+    public Review addReviewToAlbum(
+        Long albumId,
+        ReviewCreateDTO reviewDTO,
+        Authentication authentication
+    ) {
+        var album = albumRepository
+            .findById(albumId)
+            .orElseThrow(() -> new RuntimeException("Album not found"));
 
         // Получаем пользователя из токена
         String username = authentication.getName();
-        var user = userRepository.findByUsername(username).orElseThrow(() -> 
-            new RuntimeException("User not found"));
+        var user = userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
         Review review = new Review();
         review.setAlbum(album);
