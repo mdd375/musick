@@ -362,7 +362,7 @@ public class AlbumController {
 
     @Operation(
         summary = "Добавление трека к альбому",
-        description = "Добавляет новый трек к альбому. Доступно только владельцу альбома и администраторам.",
+        description = "Добавляет новый трек в конец альбома. Доступно только владельцу альбома и администраторам.",
         security = @SecurityRequirement(name = "JWT")
     )
     @ApiResponses(
@@ -394,6 +394,81 @@ public class AlbumController {
     ) {
         return ResponseEntity.ok(
             albumService.addTrackToAlbum(albumId, trackDTO)
+        );
+    }
+
+    @Operation(
+        summary = "Удаление трека из альбома",
+        description = "Удаляет трек из альбома по указанной позиции. Позиции остальных треков будут пересчитаны. Доступно только владельцу альбома и администраторам.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses(
+        {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Трек успешно удален из альбома"
+            ),
+            @ApiResponse(
+                responseCode = "400",
+                description = "Некорректные данные для удаления"
+            ),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(
+                responseCode = "403",
+                description = "Недостаточно прав (должен быть владельцем альбома)"
+            ),
+            @ApiResponse(
+                responseCode = "404",
+                description = "Альбом или трек не найден"
+            ),
+        }
+    )
+    @DeleteMapping("/{albumId}/tracks/{position}")
+    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId)")
+    public ResponseEntity<List<Track>> removeTrackFromAlbum(
+        @Parameter(description = "ID альбома") @PathVariable Long albumId,
+        @Parameter(description = "Позиция трека в альбоме") @PathVariable Integer position
+    ) {
+        return ResponseEntity.ok(
+            albumService.removeTrackFromAlbum(albumId, position)
+        );
+    }
+
+    @Operation(
+        summary = "Перемещение трека в альбоме",
+        description = "Перемещает трек в альбоме на новую позицию. Позиции остальных треков будут пересчитаны. Доступно только владельцу альбома и администраторам.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses(
+        {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Трек успешно перемещен"
+            ),
+            @ApiResponse(
+                responseCode = "400",
+                description = "Некорректные данные для перемещения"
+            ),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(
+                responseCode = "403",
+                description = "Недостаточно прав (должен быть владельцем альбома)"
+            ),
+            @ApiResponse(
+                responseCode = "404",
+                description = "Альбом или трек не найден"
+            ),
+        }
+    )
+    @PutMapping("/{albumId}/tracks/{currentPosition}/move/{newPosition}")
+    @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId)")
+    public ResponseEntity<List<Track>> moveTrackPosition(
+        @Parameter(description = "ID альбома") @PathVariable Long albumId,
+        @Parameter(description = "Текущая позиция трека") @PathVariable Integer currentPosition,
+        @Parameter(description = "Новая позиция трека") @PathVariable Integer newPosition
+    ) {
+        return ResponseEntity.ok(
+            albumService.moveTrackPosition(albumId, currentPosition, newPosition)
         );
     }
 }

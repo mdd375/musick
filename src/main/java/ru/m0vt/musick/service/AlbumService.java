@@ -1,9 +1,13 @@
 package ru.m0vt.musick.service;
 
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.m0vt.musick.dto.AlbumCreateDTO;
 import ru.m0vt.musick.dto.ReviewCreateDTO;
 import ru.m0vt.musick.dto.TrackCreateDTO;
@@ -57,6 +61,7 @@ public class AlbumService {
         album.setCoverUrl(albumDTO.getCoverUrl());
         album.setPrice(albumDTO.getPrice());
         album.setReleaseDate(albumDTO.getReleaseDate());
+        album.setCreatedAt(LocalDateTime.now());
 
         // Получаем пользователя из токена
         String username = authentication.getName();
@@ -66,7 +71,9 @@ public class AlbumService {
 
         // Проверяем, что пользователь имеет профиль артиста
         if (user.getArtistProfile() == null) {
-            throw new UserValidationException("User does not have an artist profile");
+            throw new UserValidationException(
+                "User does not have an artist profile"
+            );
         }
 
         album.setArtist(user.getArtistProfile());
@@ -99,7 +106,8 @@ public class AlbumService {
 
         var album = albumRepository
             .findById(albumId)
-            .orElseThrow(() -> new ResourceNotFoundException("Album not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found")
+            );
 
         var purchase = new Purchase();
         purchase.setAlbum(album);
@@ -142,7 +150,8 @@ public class AlbumService {
     ) {
         var album = albumRepository
             .findById(albumId)
-            .orElseThrow(() -> new ResourceNotFoundException("Album not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found")
+            );
 
         // Получаем пользователя из токена
         String username = authentication.getName();
@@ -168,16 +177,175 @@ public class AlbumService {
     }
 
     public Track addTrackToAlbum(Long albumId, TrackCreateDTO trackDTO) {
-        var album = albumRepository.findById(albumId).orElse(null);
-        if (album != null) {
-            Track track = new Track();
-            track.setAlbum(album);
-            track.setTitle(trackDTO.getTitle());
-            track.setDurationSec(trackDTO.getDurationSec());
-            track.setTrackNumber(trackDTO.getTrackNumber());
-            track.setAudioUrl(trackDTO.getAudioUrl());
-            return trackRepository.save(track);
+        var album = albumRepository
+            .findById(albumId)
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found")
+            );
+
+        // Получаем текущие треки альбома
+        List<Track> tracks = album.getTracks();
+
+        // Определяем номер для нового трека (последний номер + 1 или 1, если треков нет)
+        int trackNumber = 1;
+        if (tracks != null && !tracks.isEmpty()) {
+            trackNumber = tracks.size() + 1;
         }
-        return null;
+
+        // Создаем новый трек
+        Track track = new Track();
+        track.setAlbum(album);
+        track.setTitle(trackDTO.getTitle());
+        track.setDurationSec(trackDTO.getDurationSec());
+        track.setTrackNumber(trackNumber);
+        track.setAudioUrl(trackDTO.getAudioUrl());
+
+        return trackRepository.save(track);
+    }
+
+    /**
+     * Удаляет трек из альбома по номеру позиции и перестраивает нумерацию остальных треков
+     *
+     * @param albumId ID альбома
+     * @param trackPosition Позиция трека (не ID, а порядковый номер в альбоме)
+     * @return Обновленный список треков альбома
+     */
+    @Transactional
+    public List<Track> removeTrackFromAlbum(
+        Long albumId,
+        Integer trackPosition
+    ) {
+        var album = albumRepository
+            .findById(albumId)
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found")
+            );
+
+        List<Track> tracks = album.getTracks();
+        if (tracks == null || tracks.isEmpty()) {
+            throw new ResourceNotFoundException("Album has no tracks");
+        }
+
+        // Находим трек по позиции
+        Track trackToRemove = null;
+        for (Track t : tracks) {
+            if (t.getTrackNumber().equals(trackPosition)) {
+                trackToRemove = t;
+                break;
+            }
+        }
+
+        if (trackToRemove == null) {
+            throw new ResourceNotFoundException(
+                "Track at position " + trackPosition + " not found"
+            );
+        }
+
+        // Удаляем трек
+        trackRepository.delete(trackToRemove);
+
+        // Обновляем позиции оставшихся треков
+        for (Track t : tracks) {
+            if (t.getTrackNumber() > trackPosition) {
+                t.setTrackNumber(t.getTrackNumber() - 1);
+                trackRepository.save(t);
+            }
+        }
+
+        // Возвращаем обновленный список треков
+        return albumRepository
+            .findById(albumId)
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found"))
+            .getTracks()
+            .stream()
+            .sorted(Comparator.comparing(Track::getTrackNumber))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Перемещает трек в альбоме на новую позицию
+     *
+     * @param albumId ID альбома
+     * @param currentPosition Текущая позиция трека
+     * @param newPosition Новая позиция трека
+     * @return Обновленный список треков альбома
+     */
+    @Transactional
+    public List<Track> moveTrackPosition(
+        Long albumId,
+        Integer currentPosition,
+        Integer newPosition
+    ) {
+        var album = albumRepository
+            .findById(albumId)
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found")
+            );
+
+        List<Track> tracks = album.getTracks();
+        if (tracks == null || tracks.isEmpty()) {
+            throw new ResourceNotFoundException("Album has no tracks");
+        }
+
+        // Проверка валидности позиций
+        if (
+            currentPosition < 1 ||
+            newPosition < 1 ||
+            currentPosition > tracks.size() ||
+            newPosition > tracks.size()
+        ) {
+            throw new IllegalArgumentException("Invalid track position");
+        }
+
+        if (currentPosition.equals(newPosition)) {
+            // Если позиция не меняется, просто возвращаем текущие треки
+            return tracks;
+        }
+
+        // Находим перемещаемый трек
+        Track trackToMove = null;
+        for (Track t : tracks) {
+            if (t.getTrackNumber().equals(currentPosition)) {
+                trackToMove = t;
+                break;
+            }
+        }
+
+        if (trackToMove == null) {
+            throw new ResourceNotFoundException(
+                "Track at position " + currentPosition + " not found"
+            );
+        }
+
+        // Обновляем позиции треков
+        if (currentPosition < newPosition) {
+            // Перемещение вниз - уменьшаем позиции треков между currentPosition и newPosition
+            for (Track t : tracks) {
+                int pos = t.getTrackNumber();
+                if (pos > currentPosition && pos <= newPosition) {
+                    t.setTrackNumber(pos - 1);
+                    trackRepository.save(t);
+                }
+            }
+        } else {
+            // Перемещение вверх - увеличиваем позиции треков между newPosition и currentPosition
+            for (Track t : tracks) {
+                int pos = t.getTrackNumber();
+                if (pos >= newPosition && pos < currentPosition) {
+                    t.setTrackNumber(pos + 1);
+                    trackRepository.save(t);
+                }
+            }
+        }
+
+        // Устанавливаем новую позицию для перемещаемого трека
+        trackToMove.setTrackNumber(newPosition);
+        trackRepository.save(trackToMove);
+
+        // Возвращаем обновленный список треков
+        return albumRepository
+            .findById(albumId)
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found"))
+            .getTracks()
+            .stream()
+            .sorted(Comparator.comparing(Track::getTrackNumber))
+            .collect(Collectors.toList());
     }
 }
