@@ -11,6 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ru.m0vt.musick.dto.AddBalanceDTO;
 import ru.m0vt.musick.dto.UserCreateDTO;
+import ru.m0vt.musick.exception.BadRequestException;
+import ru.m0vt.musick.exception.ResourceNotFoundException;
+import ru.m0vt.musick.exception.SubscriptionConflictException;
+import ru.m0vt.musick.exception.UserAlreadyExistsException;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.repository.*;
 
@@ -49,10 +53,10 @@ public class UserService {
 
     public User createUser(UserCreateDTO userDTO) {
         if (userRepository.existsByUsername(userDTO.getUsername())) {
-            throw new IllegalArgumentException("Username already exists");
+            throw new UserAlreadyExistsException("Username already exists");
         }
         if (userRepository.existsByEmail(userDTO.getEmail())) {
-            throw new IllegalArgumentException("Email already exists");
+            throw new UserAlreadyExistsException("Email already exists");
         }
 
         User user = new User();
@@ -80,46 +84,46 @@ public class UserService {
     public List<Purchase> getUserPurchases(Authentication authentication) {
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return purchaseRepository.findByUserId(user.getId());
     }
 
     public List<Review> getUserReviews(Authentication authentication) {
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return reviewRepository.findByUserId(user.getId());
     }
 
     public List<Subscription> getUserSubscriptions(Authentication authentication) {
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return subscriptionRepository.findByUserId(user.getId());
     }
 
     public Subscription addUserSubscription(Long artistId, Authentication authentication) {
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
         // Проверяем, что артист существует
         if (artistId == null) {
-            throw new IllegalArgumentException("Artist ID cannot be null");
+            throw new BadRequestException("Artist ID cannot be null");
         }
         
         Artist foundArtist = artistRepository.findById(artistId)
-                .orElseThrow(() -> new RuntimeException("Artist not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Artist not found"));
         
         // Проверяем, не пытается ли пользователь подписаться на себя
         if (foundArtist.getUser() != null && foundArtist.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("Cannot subscribe to yourself");
+            throw new BadRequestException("Cannot subscribe to yourself");
         }
         
         // Проверяем, существует ли уже подписка
         boolean subscriptionExists = subscriptionRepository.existsByUserIdAndArtistId(user.getId(), artistId);
         if (subscriptionExists) {
-            throw new IllegalArgumentException("You are already subscribed to this artist");
+            throw new SubscriptionConflictException("You are already subscribed to this artist");
         }
                 
         Subscription subscription = new Subscription();
@@ -139,16 +143,16 @@ public class UserService {
     @Transactional
     public User addBalance(AddBalanceDTO addBalanceDTO, Authentication authentication) {
         if (addBalanceDTO == null || addBalanceDTO.getAmount() == null) {
-            throw new IllegalArgumentException("Amount cannot be null");
+            throw new BadRequestException("Amount cannot be null");
         }
         
         if (addBalanceDTO.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
+            throw new BadRequestException("Amount must be positive");
         }
         
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
         // Обновляем баланс пользователя
         BigDecimal currentBalance = user.getBalance();

@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.ArtistCreateDTO;
+import ru.m0vt.musick.exception.ResourceNotFoundException;
+import ru.m0vt.musick.exception.UserValidationException;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.model.Artist;
 import ru.m0vt.musick.model.Review;
@@ -41,12 +43,12 @@ public class ArtistService {
         String username = authentication.getName();
         var user = userRepository.findByUsername(username).orElse(null);
         if (user == null) {
-            throw new RuntimeException("User not found");
+            throw new ResourceNotFoundException("User not found");
         }
         
         // Проверка, что у пользователя еще нет профиля артиста
         if (user.getArtistProfile() != null) {
-            throw new RuntimeException("User already has artist profile");
+            throw new UserValidationException("User already has artist profile");
         }
         
         Artist artist = new Artist();

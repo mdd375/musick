@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.AuthRequestDTO;
 import ru.m0vt.musick.dto.AuthResponseDTO;
 import ru.m0vt.musick.dto.RegisterRequestDTO;
+import ru.m0vt.musick.exception.AccessDeniedException;
+import ru.m0vt.musick.exception.AuthenticationFailedException;
+import ru.m0vt.musick.exception.UserAlreadyExistsException;
 import ru.m0vt.musick.model.User;
 import ru.m0vt.musick.repository.UserRepository;
 
@@ -37,10 +40,10 @@ public class AuthenticationService {
     public AuthResponseDTO register(RegisterRequestDTO request) {
         // Проверяем, существует ли пользователь
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username is already taken");
+            throw new UserAlreadyExistsException("Username is already taken");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email is already in use");
+            throw new UserAlreadyExistsException("Email is already in use");
         }
 
         // Если роль - ADMIN, проверяем права текущего пользователя
@@ -63,7 +66,7 @@ public class AuthenticationService {
 
             // Если текущий пользователь не админ, отказываем в создании админа
             if (!isAdmin) {
-                throw new RuntimeException(
+                throw new AccessDeniedException(
                     "Only administrators can create users with ADMIN role"
                 );
             }
@@ -118,7 +121,7 @@ public class AuthenticationService {
                 (UserDetails) authentication.getPrincipal();
             User user = userRepository
                 .findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AuthenticationFailedException("User not found"));
 
             // Генерируем JWT токен
             String token = jwtService.generateToken(userDetails);
@@ -130,7 +133,7 @@ public class AuthenticationService {
                 user.getRole()
             );
         } catch (AuthenticationException e) {
-            throw new RuntimeException("Invalid username or password");
+            throw new AuthenticationFailedException("Invalid username or password");
         }
     }
 }

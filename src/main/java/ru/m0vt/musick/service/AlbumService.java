@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.AlbumCreateDTO;
 import ru.m0vt.musick.dto.ReviewCreateDTO;
 import ru.m0vt.musick.dto.TrackCreateDTO;
+import ru.m0vt.musick.exception.ResourceNotFoundException;
+import ru.m0vt.musick.exception.UserValidationException;
 import ru.m0vt.musick.model.Album;
 import ru.m0vt.musick.model.AlbumTag;
 import ru.m0vt.musick.model.Purchase;
@@ -60,11 +62,11 @@ public class AlbumService {
         String username = authentication.getName();
         var user = userRepository
             .findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // Проверяем, что пользователь имеет профиль артиста
         if (user.getArtistProfile() == null) {
-            throw new RuntimeException("User does not have an artist profile");
+            throw new UserValidationException("User does not have an artist profile");
         }
 
         album.setArtist(user.getArtistProfile());
@@ -93,11 +95,11 @@ public class AlbumService {
         String username = authentication.getName();
         var user = userRepository
             .findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         var album = albumRepository
             .findById(albumId)
-            .orElseThrow(() -> new RuntimeException("Album not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found"));
 
         var purchase = new Purchase();
         purchase.setAlbum(album);
@@ -109,7 +111,7 @@ public class AlbumService {
     public AlbumTag addTagToAlbum(Long albumId, String tagName) {
         var album = albumRepository.findById(albumId).orElse(null);
         if (album == null) {
-            throw new RuntimeException("Album not found");
+            throw new ResourceNotFoundException("Album not found");
         }
         var tag = tagRepository.findByName(tagName);
         var albumTag = new AlbumTag();
@@ -128,7 +130,7 @@ public class AlbumService {
     public List<Review> getReviewsForAlbum(Long albumId) {
         var album = albumRepository.findById(albumId).orElse(null);
         if (album == null) {
-            throw new RuntimeException("Album not found");
+            throw new ResourceNotFoundException("Album not found");
         }
         return album.getReviews();
     }
@@ -140,13 +142,13 @@ public class AlbumService {
     ) {
         var album = albumRepository
             .findById(albumId)
-            .orElseThrow(() -> new RuntimeException("Album not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found"));
 
         // Получаем пользователя из токена
         String username = authentication.getName();
         var user = userRepository
             .findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Review review = new Review();
         review.setAlbum(album);
@@ -160,7 +162,7 @@ public class AlbumService {
     public List<Track> getTracksForAlbum(Long albumId) {
         var album = albumRepository.findById(albumId).orElse(null);
         if (album == null) {
-            throw new RuntimeException("Album not found");
+            throw new ResourceNotFoundException("Album not found");
         }
         return album.getTracks();
     }
