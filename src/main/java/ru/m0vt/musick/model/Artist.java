@@ -1,11 +1,15 @@
 package ru.m0vt.musick.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import java.util.List;
 
 @Entity
 @Table(name = "artist_profile")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Artist {
     @Id
     private Long id;
@@ -13,6 +17,7 @@ public class Artist {
     @OneToOne
     @MapsId
     @JoinColumn(name = "user_id")
+    @JsonBackReference
     private User user;
 
     private String name;
@@ -22,6 +27,7 @@ public class Artist {
     private String photoUrl;
 
     @OneToMany(mappedBy = "artist")
+    @JsonBackReference
     private List<Album> albums;
 
     public Long getId() {

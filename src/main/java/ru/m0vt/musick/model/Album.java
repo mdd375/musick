@@ -5,9 +5,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "albums")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Album {
 
     @Id
@@ -16,6 +21,7 @@ public class Album {
 
     @ManyToOne
     @JoinColumn(name = "artist_id")
+    @JsonBackReference
     private Artist artist;
 
     private String title;
@@ -32,9 +38,11 @@ public class Album {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "album")
+    @JsonManagedReference
     private List<Track> tracks;
 
     @OneToMany(mappedBy = "album")
+    @JsonManagedReference
     private List<Review> reviews;
 
     @ManyToMany
@@ -43,6 +51,7 @@ public class Album {
         joinColumns = @JoinColumn(name = "album_id"),
         inverseJoinColumns = @JoinColumn(name = "tag_id")
     )
+    @JsonManagedReference
     private List<Tag> tags;
 
     public Long getId() {
