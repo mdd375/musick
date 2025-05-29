@@ -8,13 +8,16 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import ru.m0vt.musick.dto.AlbumBriefDTO;
 import ru.m0vt.musick.dto.ArtistCreateDTO;
-import ru.m0vt.musick.model.Album;
+import ru.m0vt.musick.dto.ArtistCreateResponseDTO;
+import ru.m0vt.musick.dto.ArtistUpdateDTO;
 import ru.m0vt.musick.model.Artist;
 import ru.m0vt.musick.model.Review;
 import ru.m0vt.musick.model.Subscription;
@@ -77,14 +80,14 @@ public class ArtistController {
 
     @Operation(
         summary = "Создание профиля артиста",
-        description = "Создает профиль артиста для текущего пользователя. Доступно только пользователям и администраторам.",
+        description = "Создает профиль артиста для текущего пользователя, обновляет роль пользователя и возвращает новый JWT токен. Доступно только пользователям и администраторам.",
         security = @SecurityRequirement(name = "JWT")
     )
     @ApiResponses(
         {
             @ApiResponse(
                 responseCode = "200",
-                description = "Профиль артиста успешно создан"
+                description = "Профиль артиста успешно создан, роль обновлена, возвращен новый JWT токен"
             ),
             @ApiResponse(
                 responseCode = "400",
@@ -103,7 +106,7 @@ public class ArtistController {
     )
     @PostMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<Artist> createArtist(
+    public ResponseEntity<ArtistCreateResponseDTO> createArtist(
         @Valid @RequestBody ArtistCreateDTO artistDTO,
         Authentication authentication
     ) {
@@ -140,16 +143,16 @@ public class ArtistController {
     )
     @PutMapping("/{id}")
     @PreAuthorize(
-        "@securityService.isSameUser(authentication, #artist.user.id)"
+        "@securityService.isSameUser(authentication, @securityService.getArtistUserId(#id))"
     )
     public ResponseEntity<Artist> updateArtist(
         @Parameter(description = "ID артиста") @PathVariable Long id,
-        @Valid @RequestBody Artist artist
+        @Valid @RequestBody ArtistUpdateDTO artistUpdateDTO
     ) {
-        Artist updatedArtist = artistService.updateArtist(id, artist);
-        if (updatedArtist == null) {
-            return ResponseEntity.notFound().build();
-        }
+        Artist updatedArtist = artistService.updateArtistProfile(
+            id,
+            artistUpdateDTO
+        );
         return ResponseEntity.ok(updatedArtist);
     }
 
@@ -201,7 +204,7 @@ public class ArtistController {
         }
     )
     @GetMapping("/{artistId}/albums")
-    public ResponseEntity<List<Album>> getArtistAlbums(
+    public ResponseEntity<List<AlbumBriefDTO>> getArtistAlbums(
         @Parameter(description = "ID артиста") @PathVariable Long artistId
     ) {
         return ResponseEntity.ok(artistService.getArtistAlbums(artistId));
@@ -259,5 +262,73 @@ public class ArtistController {
         @Parameter(description = "ID альбома") @PathVariable Long albumId
     ) {
         return ResponseEntity.ok(artistService.getAlbumReviews(albumId));
+    }
+
+    @Operation(
+        summary = "Подписка на артиста",
+        description = "Создает подписку текущего пользователя на указанного артиста.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses(
+        {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Подписка успешно создана"
+            ),
+            @ApiResponse(
+                responseCode = "400",
+                description = "Некорректный запрос (например, попытка подписаться на самого себя)"
+            ),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(
+                responseCode = "404",
+                description = "Артист не найден"
+            ),
+            @ApiResponse(
+                responseCode = "409",
+                description = "Подписка уже существует"
+            ),
+        }
+    )
+    @PostMapping("/{artistId}/subscribe")
+    @PreAuthorize("hasAnyRole('USER', 'ARTIST', 'ADMIN')")
+    public ResponseEntity<Subscription> subscribeToArtist(
+        @Parameter(description = "ID артиста") @PathVariable Long artistId,
+        Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+            artistService.subscribeToArtist(artistId, authentication)
+        );
+    }
+
+    @Operation(
+        summary = "Отписка от артиста",
+        description = "Удаляет подписку текущего пользователя на указанного артиста.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses(
+        {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Подписка успешно удалена"
+            ),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(
+                responseCode = "404",
+                description = "Артист не найден или подписка не существует"
+            ),
+        }
+    )
+    @DeleteMapping("/{artistId}/unsubscribe")
+    @PreAuthorize("hasAnyRole('USER', 'ARTIST', 'ADMIN')")
+    public ResponseEntity<Map<String, Boolean>> unsubscribeFromArtist(
+        @Parameter(description = "ID артиста") @PathVariable Long artistId,
+        Authentication authentication
+    ) {
+        boolean result = artistService.unsubscribeFromArtist(
+            artistId,
+            authentication
+        );
+        return ResponseEntity.ok(Map.of("success", result));
     }
 }

@@ -8,9 +8,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.m0vt.musick.dto.AlbumBriefDTO;
 import ru.m0vt.musick.dto.AlbumCreateDTO;
+import ru.m0vt.musick.dto.AlbumDetailDTO;
+import ru.m0vt.musick.dto.AlbumUpdateDTO;
 import ru.m0vt.musick.dto.ReviewCreateDTO;
 import ru.m0vt.musick.dto.TrackCreateDTO;
+import ru.m0vt.musick.exception.BadRequestException;
+import ru.m0vt.musick.exception.NotEnoughMoney;
+import ru.m0vt.musick.exception.PurchaseAlreadyExists;
 import ru.m0vt.musick.exception.ResourceNotFoundException;
 import ru.m0vt.musick.exception.UserValidationException;
 import ru.m0vt.musick.model.Album;
@@ -44,15 +50,91 @@ public class AlbumService {
     @Autowired
     private TrackRepository trackRepository;
 
-    public List<Album> getAllAlbums() {
-        return albumRepository.findAll();
+    public List<AlbumBriefDTO> getAllAlbums() {
+        return albumRepository
+            .findAll()
+            .stream()
+            .map(this::convertToAlbumBriefDTO)
+            .collect(Collectors.toList());
     }
 
-    public Album getAlbumById(Long id) {
-        return albumRepository.findById(id).orElse(null);
+    public AlbumDetailDTO getAlbumById(Long id) {
+        Album album = albumRepository.findById(id).orElse(null);
+        return album != null ? convertToAlbumDetailDTO(album) : null;
     }
 
-    public Album createAlbum(
+    /**
+     * Преобразует объект Album в AlbumBriefDTO
+     *
+     * @param album Объект альбома
+     * @return AlbumBriefDTO с данными альбома
+     */
+    public AlbumBriefDTO convertToAlbumBriefDTO(Album album) {
+        AlbumBriefDTO briefDTO = new AlbumBriefDTO();
+        briefDTO.setId(album.getId());
+        briefDTO.setTitle(album.getTitle());
+        briefDTO.setCoverUrl(album.getCoverUrl());
+
+        if (album.getArtist() != null) {
+            briefDTO.setArtistId(album.getArtist().getId());
+            briefDTO.setArtistName(album.getArtist().getName());
+        }
+
+        List<Track> tracks = album.getTracks();
+        briefDTO.setTrackCount(tracks != null ? tracks.size() : 0);
+
+        // Вычисляем общую продолжительность альбома
+        int totalDuration = 0;
+        if (tracks != null) {
+            totalDuration = tracks
+                .stream()
+                .mapToInt(track ->
+                    track.getDurationSec() != null ? track.getDurationSec() : 0
+                )
+                .sum();
+        }
+        briefDTO.setTotalDurationSec(totalDuration);
+
+        return briefDTO;
+    }
+
+    /**
+     * Преобразует объект Album в AlbumDetailDTO
+     *
+     * @param album Объект альбома
+     * @return AlbumDetailDTO с данными альбома
+     */
+    public AlbumDetailDTO convertToAlbumDetailDTO(Album album) {
+        AlbumDetailDTO detailDTO = new AlbumDetailDTO();
+        detailDTO.setId(album.getId());
+        detailDTO.setTitle(album.getTitle());
+        detailDTO.setCoverUrl(album.getCoverUrl());
+        detailDTO.setReleaseDate(album.getReleaseDate());
+        detailDTO.setPrice(album.getPrice());
+
+        if (album.getArtist() != null) {
+            detailDTO.setArtistId(album.getArtist().getId());
+            detailDTO.setArtistName(album.getArtist().getName());
+        }
+
+        // Получаем треки и сортируем их по номеру
+        List<Track> tracks = album.getTracks();
+        if (tracks != null) {
+            detailDTO.setTracks(
+                tracks
+                    .stream()
+                    .sorted(Comparator.comparing(Track::getTrackNumber))
+                    .collect(Collectors.toList())
+            );
+        }
+
+        // Добавляем теги
+        detailDTO.setTags(album.getTags());
+
+        return detailDTO;
+    }
+
+    public AlbumDetailDTO createAlbum(
         AlbumCreateDTO albumDTO,
         Authentication authentication
     ) {
@@ -78,25 +160,38 @@ public class AlbumService {
 
         album.setArtist(user.getArtistProfile());
 
-        return albumRepository.save(album);
+        Album savedAlbum = albumRepository.save(album);
+        return convertToAlbumDetailDTO(savedAlbum);
     }
 
-    public Album updateAlbum(Long id, Album album) {
-        Album existingAlbum = albumRepository.findById(id).orElse(null);
-        if (existingAlbum != null) {
-            existingAlbum.setTitle(album.getTitle());
-            existingAlbum.setCoverUrl(album.getCoverUrl());
-            existingAlbum.setPrice(album.getPrice());
-            existingAlbum.setReleaseDate(album.getReleaseDate());
-            return albumRepository.save(existingAlbum);
-        }
-        return null;
+    public AlbumDetailDTO updateAlbum(Long id, AlbumUpdateDTO albumUpdateDTO) {
+        Album existingAlbum = albumRepository
+            .findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Album not found")
+            );
+
+        existingAlbum.setTitle(albumUpdateDTO.getTitle());
+        existingAlbum.setCoverUrl(albumUpdateDTO.getCoverUrl());
+        existingAlbum.setPrice(albumUpdateDTO.getPrice());
+        existingAlbum.setReleaseDate(albumUpdateDTO.getReleaseDate());
+
+        Album updatedAlbum = albumRepository.save(existingAlbum);
+        return convertToAlbumDetailDTO(updatedAlbum);
     }
 
     public void deleteAlbum(Long id) {
+        var album = albumRepository.findById(id).orElse(null);
+        if (album == null) {
+            throw new ResourceNotFoundException("Album not found");
+        }
+        var tracks = album.getTracks();
+        for (var track : tracks) {
+            trackRepository.delete(track);
+        }
         albumRepository.deleteById(id);
     }
 
+    @Transactional
     public Purchase purchaseAlbum(Long albumId, Authentication authentication) {
         // Получаем пользователя из токена
         String username = authentication.getName();
@@ -109,10 +204,54 @@ public class AlbumService {
             .orElseThrow(() -> new ResourceNotFoundException("Album not found")
             );
 
+        // Проверяем, существует ли уже покупка
+        if (
+            purchaseRepository.findByUser_IdAndAlbum_Id(
+                user.getId(),
+                album.getId()
+            ) !=
+            null
+        ) {
+            throw new PurchaseAlreadyExists("Purchase already exists");
+        }
+
+        // Проверяем баланс пользователя
+        if (album.getPrice().compareTo(user.getBalance()) > 0) {
+            throw new NotEnoughMoney("Not enough money for payment");
+        }
+
+        // Получаем артиста альбома
+        var artist = album.getArtist();
+        if (artist == null) {
+            throw new ResourceNotFoundException("Album's artist not found");
+        }
+
+        // Проверка, не пытается ли артист купить свой собственный альбом
+        if (
+            artist.getUser() != null &&
+            artist.getUser().getId().equals(user.getId())
+        ) {
+            throw new BadRequestException(
+                "Artist cannot purchase their own album"
+            );
+        }
+
+        var artist_user = artist.getUser();
+
+        // Обновляем балансы
+        artist_user.setBalance(artist_user.getBalance().add(album.getPrice()));
+        user.setBalance(user.getBalance().subtract(album.getPrice()));
+
+        // Сохраняем изменения пользователей
+        userRepository.save(artist_user);
+        userRepository.save(user);
+
+        // Создаем и сохраняем запись о покупке
         var purchase = new Purchase();
         purchase.setAlbum(album);
         purchase.setUser(user);
         purchase.setAmount(album.getPrice());
+        purchase.setPurchaseDate(LocalDateTime.now());
         return purchaseRepository.save(purchase);
     }
 
@@ -122,6 +261,11 @@ public class AlbumService {
             throw new ResourceNotFoundException("Album not found");
         }
         var tag = tagRepository.findByName(tagName);
+        if (tag == null) {
+            var newTag = new ru.m0vt.musick.model.Tag();
+            newTag.setName(tagName);
+            tag = tagRepository.save(newTag);
+        }
         var albumTag = new AlbumTag();
         albumTag.setTag(tag);
         albumTag.setAlbum(album);
@@ -164,6 +308,7 @@ public class AlbumService {
         review.setUser(user);
         review.setText(reviewDTO.getText());
         review.setFavoriteTracks(reviewDTO.getFavoriteTracks());
+        review.setCreatedAt(LocalDateTime.now());
 
         return reviewRepository.save(review);
     }
@@ -173,7 +318,15 @@ public class AlbumService {
         if (album == null) {
             throw new ResourceNotFoundException("Album not found");
         }
-        return album.getTracks();
+
+        // Сортируем треки по номеру перед возвратом
+        return album.getTracks() != null
+            ? album
+                .getTracks()
+                .stream()
+                .sorted(Comparator.comparing(Track::getTrackNumber))
+                .collect(Collectors.toList())
+            : null;
     }
 
     public Track addTrackToAlbum(Long albumId, TrackCreateDTO trackDTO) {

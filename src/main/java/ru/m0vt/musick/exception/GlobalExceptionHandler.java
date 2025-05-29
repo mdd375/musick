@@ -58,7 +58,8 @@ public class GlobalExceptionHandler {
     ) {
         // Здесь можно логировать неожиданные ошибки
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
-            "An unexpected error occurred",
+            // "An unexpected error occurred",
+            ex.getMessage(),
             "INTERNAL_ERROR",
             HttpStatus.INTERNAL_SERVER_ERROR.value()
         );

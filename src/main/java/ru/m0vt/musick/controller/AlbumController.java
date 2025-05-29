@@ -13,7 +13,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import ru.m0vt.musick.dto.*;
+import ru.m0vt.musick.dto.AlbumBriefDTO;
+import ru.m0vt.musick.dto.AlbumCreateDTO;
+import ru.m0vt.musick.dto.AlbumDetailDTO;
+import ru.m0vt.musick.dto.AlbumUpdateDTO;
+import ru.m0vt.musick.dto.ReviewCreateDTO;
+import ru.m0vt.musick.dto.TrackCreateDTO;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.service.AlbumService;
 
@@ -38,7 +43,7 @@ public class AlbumController {
         }
     )
     @GetMapping
-    public ResponseEntity<List<Album>> getAllAlbums() {
+    public ResponseEntity<List<AlbumBriefDTO>> getAllAlbums() {
         return ResponseEntity.ok(albumService.getAllAlbums());
     }
 
@@ -59,10 +64,10 @@ public class AlbumController {
         }
     )
     @GetMapping("/{id}")
-    public ResponseEntity<Album> getAlbumById(
+    public ResponseEntity<AlbumDetailDTO> getAlbumById(
         @Parameter(description = "ID альбома") @PathVariable Long id
     ) {
-        Album album = albumService.getAlbumById(id);
+        AlbumDetailDTO album = albumService.getAlbumById(id);
         if (album == null) {
             return ResponseEntity.notFound().build();
         }
@@ -93,7 +98,7 @@ public class AlbumController {
     )
     @PostMapping
     @PreAuthorize("hasAnyRole('ARTIST', 'ADMIN')")
-    public ResponseEntity<Album> createAlbum(
+    public ResponseEntity<AlbumDetailDTO> createAlbum(
         @Valid @RequestBody AlbumCreateDTO albumDTO,
         Authentication authentication
     ) {
@@ -130,14 +135,14 @@ public class AlbumController {
     )
     @PutMapping("/{id}")
     @PreAuthorize("@securityService.isAlbumOwner(authentication, #id)")
-    public ResponseEntity<Album> updateAlbum(
+    public ResponseEntity<AlbumDetailDTO> updateAlbum(
         @Parameter(description = "ID альбома") @PathVariable Long id,
-        @Valid @RequestBody Album album
+        @Valid @RequestBody AlbumUpdateDTO albumUpdateDTO
     ) {
-        Album updatedAlbum = albumService.updateAlbum(id, album);
-        if (updatedAlbum == null) {
-            return ResponseEntity.notFound().build();
-        }
+        AlbumDetailDTO updatedAlbum = albumService.updateAlbum(
+            id,
+            albumUpdateDTO
+        );
         return ResponseEntity.ok(updatedAlbum);
     }
 
@@ -174,7 +179,7 @@ public class AlbumController {
 
     @Operation(
         summary = "Покупка альбома",
-        description = "Создает запись о покупке альбома текущим пользователем.",
+        description = "Создает запись о покупке альбома текущим пользователем. Снимает деньги с баланса покупателя и добавляет их на счет артиста.",
         security = @SecurityRequirement(name = "JWT")
     )
     @ApiResponses(
@@ -185,9 +190,13 @@ public class AlbumController {
             ),
             @ApiResponse(
                 responseCode = "400",
-                description = "Ошибка при покупке альбома"
+                description = "Ошибка при покупке альбома или попытка артиста купить собственный альбом"
             ),
             @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(
+                responseCode = "402",
+                description = "Недостаточно денег на балансе пользователя"
+            ),
             @ApiResponse(
                 responseCode = "403",
                 description = "Недостаточно прав для покупки альбома"
@@ -195,6 +204,10 @@ public class AlbumController {
             @ApiResponse(
                 responseCode = "404",
                 description = "Альбом не найден"
+            ),
+            @ApiResponse(
+                responseCode = "409",
+                description = "Альбом уже куплен данным пользователем"
             ),
         }
     )
@@ -427,7 +440,9 @@ public class AlbumController {
     @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId)")
     public ResponseEntity<List<Track>> removeTrackFromAlbum(
         @Parameter(description = "ID альбома") @PathVariable Long albumId,
-        @Parameter(description = "Позиция трека в альбоме") @PathVariable Integer position
+        @Parameter(
+            description = "Позиция трека в альбоме"
+        ) @PathVariable Integer position
     ) {
         return ResponseEntity.ok(
             albumService.removeTrackFromAlbum(albumId, position)
@@ -464,11 +479,19 @@ public class AlbumController {
     @PreAuthorize("@securityService.isAlbumOwner(authentication, #albumId)")
     public ResponseEntity<List<Track>> moveTrackPosition(
         @Parameter(description = "ID альбома") @PathVariable Long albumId,
-        @Parameter(description = "Текущая позиция трека") @PathVariable Integer currentPosition,
-        @Parameter(description = "Новая позиция трека") @PathVariable Integer newPosition
+        @Parameter(
+            description = "Текущая позиция трека"
+        ) @PathVariable Integer currentPosition,
+        @Parameter(
+            description = "Новая позиция трека"
+        ) @PathVariable Integer newPosition
     ) {
         return ResponseEntity.ok(
-            albumService.moveTrackPosition(albumId, currentPosition, newPosition)
+            albumService.moveTrackPosition(
+                albumId,
+                currentPosition,
+                newPosition
+            )
         );
     }
 }

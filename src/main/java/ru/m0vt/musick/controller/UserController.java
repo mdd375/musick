@@ -14,6 +14,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ru.m0vt.musick.dto.AddBalanceDTO;
+import ru.m0vt.musick.dto.PasswordChangeDTO;
+import ru.m0vt.musick.dto.UserInfoDTO;
+import ru.m0vt.musick.dto.UserUpdateDTO;
 import ru.m0vt.musick.model.*;
 import ru.m0vt.musick.service.UserService;
 
@@ -113,14 +116,48 @@ public class UserController {
     @PreAuthorize("@securityService.isSameUser(authentication, #id)")
     public ResponseEntity<User> updateUser(
         @Parameter(description = "ID пользователя") @PathVariable Long id,
-        @Valid @RequestBody User user
+        @Valid @RequestBody UserUpdateDTO userUpdateDTO
     ) {
-        User updatedUser = userService.updateUser(id, user);
-        if (updatedUser == null) {
-            return ResponseEntity.notFound().build();
-        }
+        User updatedUser = userService.updateUserProfile(id, userUpdateDTO);
         return ResponseEntity.ok(updatedUser);
     }
+    
+    @Operation(
+        summary = "Смена пароля пользователя",
+        description = "Позволяет пользователю сменить свой пароль. Требуется текущий пароль для подтверждения.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses(
+        {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Пароль успешно изменен"
+            ),
+            @ApiResponse(
+                responseCode = "400",
+                description = "Некорректные данные (неверный текущий пароль или несовпадение нового пароля и подтверждения)"
+            ),
+            @ApiResponse(
+                responseCode = "403",
+                description = "Доступ запрещен. Нельзя изменить пароль другого пользователя"
+            ),
+            @ApiResponse(
+                responseCode = "404",
+                description = "Пользователь не найден"
+            ),
+        }
+    )
+    @PutMapping("/{id}/password")
+    @PreAuthorize("@securityService.isSameUser(authentication, #id)")
+    public ResponseEntity<User> changePassword(
+        @Parameter(description = "ID пользователя") @PathVariable Long id,
+        @Valid @RequestBody PasswordChangeDTO passwordChangeDTO
+    ) {
+        User updatedUser = userService.changePassword(id, passwordChangeDTO);
+        return ResponseEntity.ok(updatedUser);
+    }
+    
+
 
     @Operation(
         summary = "Удаление пользователя",
@@ -191,6 +228,28 @@ public class UserController {
     ) {
         return ResponseEntity.ok(userService.getUserReviews(authentication));
     }
+    
+    @Operation(
+        summary = "Получение информации о текущем пользователе",
+        description = "Возвращает информацию о текущем аутентифицированном пользователе.",
+        security = @SecurityRequirement(name = "JWT")
+    )
+    @ApiResponses(
+        {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Информация о пользователе успешно получена"
+            ),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+        }
+    )
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserInfoDTO> getCurrentUserInfo(
+        Authentication authentication
+    ) {
+        return ResponseEntity.ok(userService.getCurrentUserInfo(authentication));
+    }
 
     @Operation(
         summary = "Получение списка подписок текущего пользователя",
@@ -216,42 +275,7 @@ public class UserController {
         );
     }
 
-    @Operation(
-        summary = "Подписка на артиста",
-        description = "Создает подписку текущего пользователя на указанного артиста.",
-        security = @SecurityRequirement(name = "JWT")
-    )
-    @ApiResponses(
-        {
-            @ApiResponse(
-                responseCode = "200",
-                description = "Подписка успешно создана"
-            ),
-            @ApiResponse(
-                responseCode = "400",
-                description = "Некорректный запрос (например, попытка подписаться на самого себя)"
-            ),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(
-                responseCode = "404",
-                description = "Артист не найден"
-            ),
-            @ApiResponse(
-                responseCode = "409",
-                description = "Подписка уже существует"
-            ),
-        }
-    )
-    @PostMapping("/me/subscriptions/{artistId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<Subscription> addUserSubscription(
-        @Parameter(description = "ID артиста") @PathVariable Long artistId,
-        Authentication authentication
-    ) {
-        return ResponseEntity.ok(
-            userService.addUserSubscription(artistId, authentication)
-        );
-    }
+
 
     @Operation(
         summary = "Пополнение баланса пользователя",

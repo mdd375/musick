@@ -4,10 +4,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import ru.m0vt.musick.model.Album;
+import ru.m0vt.musick.model.Artist;
 import ru.m0vt.musick.model.Review;
 import ru.m0vt.musick.model.Track;
 import ru.m0vt.musick.model.User;
 import ru.m0vt.musick.repository.AlbumRepository;
+import ru.m0vt.musick.repository.ArtistRepository;
 import ru.m0vt.musick.repository.ReviewRepository;
 import ru.m0vt.musick.repository.TrackRepository;
 import ru.m0vt.musick.repository.UserRepository;
@@ -30,6 +32,9 @@ public class SecurityService {
 
     @Autowired
     private ReviewRepository reviewRepository;
+    
+    @Autowired
+    private ArtistRepository artistRepository;
 
     /**
      * Проверяет, является ли текущий пользователь владельцем альбома.
@@ -285,5 +290,24 @@ public class SecurityService {
 
         // Любой пользователь может купить альбом
         return hasRole(authentication, "USER");
+    }
+    
+    /**
+     * Получает ID пользователя для артиста по ID артиста.
+     *
+     * @param artistId ID артиста
+     * @return ID пользователя, которому принадлежит профиль артиста
+     */
+    public Long getArtistUserId(Long artistId) {
+        if (artistId == null) {
+            return null;
+        }
+        
+        Artist artist = artistRepository.findById(artistId).orElse(null);
+        if (artist == null || artist.getUser() == null) {
+            return null;
+        }
+        
+        return artist.getUser().getId();
     }
 }

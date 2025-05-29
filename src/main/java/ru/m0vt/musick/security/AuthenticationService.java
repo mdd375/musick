@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import ru.m0vt.musick.dto.AuthRequestDTO;
 import ru.m0vt.musick.dto.AuthResponseDTO;
 import ru.m0vt.musick.dto.RegisterRequestDTO;
-import ru.m0vt.musick.exception.AccessDeniedException;
 import ru.m0vt.musick.exception.AuthenticationFailedException;
 import ru.m0vt.musick.exception.UserAlreadyExistsException;
 import ru.m0vt.musick.model.User;
@@ -46,43 +45,13 @@ public class AuthenticationService {
             throw new UserAlreadyExistsException("Email is already in use");
         }
 
-        // Если роль - ADMIN, проверяем права текущего пользователя
-        if ("ADMIN".equalsIgnoreCase(request.getRole())) {
-            // Получаем текущего пользователя, если он есть
-            Authentication authentication = SecurityContextHolder.getContext()
-                .getAuthentication();
-            boolean isAdmin = false;
-
-            if (
-                authentication != null &&
-                authentication.isAuthenticated() &&
-                !"anonymousUser".equals(authentication.getPrincipal())
-            ) {
-                isAdmin = authentication
-                    .getAuthorities()
-                    .stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-            }
-
-            // Если текущий пользователь не админ, отказываем в создании админа
-            if (!isAdmin) {
-                throw new AccessDeniedException(
-                    "Only administrators can create users with ADMIN role"
-                );
-            }
-        }
-
         // Создаем нового пользователя
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         // Для не-админов разрешаем только роли USER и ARTIST
-        user.setRole(
-            "ADMIN".equalsIgnoreCase(request.getRole())
-                ? "ADMIN"
-                : request.getRole()
-        );
+        user.setRole("USER");
         user.setCreatedAt(LocalDateTime.now());
         // Устанавливаем начальный баланс
         user.setBalance(java.math.BigDecimal.ZERO);
@@ -121,7 +90,9 @@ public class AuthenticationService {
                 (UserDetails) authentication.getPrincipal();
             User user = userRepository
                 .findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new AuthenticationFailedException("User not found"));
+                .orElseThrow(() ->
+                    new AuthenticationFailedException("User not found")
+                );
 
             // Генерируем JWT токен
             String token = jwtService.generateToken(userDetails);
@@ -133,7 +104,9 @@ public class AuthenticationService {
                 user.getRole()
             );
         } catch (AuthenticationException e) {
-            throw new AuthenticationFailedException("Invalid username or password");
+            throw new AuthenticationFailedException(
+                "Invalid username or password"
+            );
         }
     }
 }
